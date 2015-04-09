@@ -64,23 +64,23 @@ void gam_keepalive(PurpleConnection *pc)
 	GSM_ReadDevice(sm, FALSE);
 }
 
-void gam_got_sms(GSM_StateMachine *sm, GSM_SMSMessage sms, void *user_data)
+void gam_got_sms(GSM_StateMachine *sm, GSM_SMSMessage *sms, void *user_data)
 {
 	PurpleConnection *pc = user_data;
 	gchar *sender;
-	gchar *message;
+        gchar *message;
 
 	purple_debug_info("gammu", "gam_got_sms\n");
 	
-	sender = g_strdup(DecodeUnicodeString(sms.Number));
+	sender = g_strdup(DecodeUnicodeString(sms->Number));
 	purple_debug_info("gammu", "sender: '%s'\n", sender);
-	if (sms.Coding == SMS_Coding_8bit)
+	if (sms->Coding == SMS_Coding_8bit)
 	{
 		purple_debug_info("gammu", "8 bit\n");
 		//message = g_strdup("8-bit message, can not display");
-		message = g_strdup(sms.Text);
+		message = g_strdup((const gchar*) sms->Text);
 	} else {
-		message = g_strdup(DecodeUnicodeString(sms.Text));
+		message = g_strdup(DecodeUnicodeString(sms->Text));
 	}
 	
 	purple_debug_info("gammu", "message: '%s'\n", message);
@@ -94,9 +94,9 @@ void gam_got_sms(GSM_StateMachine *sm, GSM_SMSMessage sms, void *user_data)
 }
 
 void gam_send_sms_cb(GSM_StateMachine *sm, int status,
-				       int MessageReference, void *user_data)
+                     int MessageReference, void *user_data)
 {
-	PurpleConnection *pc = user_data;
+	/*PurpleConnection *pc = user_data;*/
 	if (status == 0)
 		purple_debug_info("gammu", "Message sent ok\n");
 	else
@@ -194,7 +194,7 @@ gboolean gam_check_pin(PurpleConnection *pc)
 		return FALSE;
 	
 	g_stpcpy(code.Code, password);
-	err = GSM_EnterSecurityCode(sm, code);
+	err = GSM_EnterSecurityCode(sm, &code);
 	if (err == ERR_SECURITYERROR)
 	{
 		//wrong pin
@@ -216,8 +216,7 @@ void gam_download_buddies(PurpleConnection *pc)
 	GSM_MemoryEntry entry;
 	GSM_Error error = ERR_NONE;
 	PurpleAccount *account = pc->account;
-	gchar *text;
-	int i;
+        int i;
 	
 	gchar *name;
 	gchar *number;
@@ -238,9 +237,7 @@ void gam_download_buddies(PurpleConnection *pc)
 			switch(entry.Entries[i].EntryType) {
 				case PBK_Number_General:
 				case PBK_Number_Mobile:
-				case PBK_Number_Mobile_Work:
-				case PBK_Number_Mobile_Home:
-					if (number == NULL)
+                                  if (number == NULL)
 					{
 						number = g_strdup(DecodeUnicodeString(entry.Entries[i].Text));
 						purple_debug_info("gammu", "number %s\n", number);
@@ -600,7 +597,7 @@ static PurplePluginProtocolInfo prpl_info = {
 	sizeof(PurplePluginProtocolInfo), /* struct_size */
 	gam_account_text_table  /* get_account_text_table */
 #else
-	(gpointer) sizeof(PurplePluginProtocolInfo)
+	sizeof(PurplePluginProtocolInfo)
 #endif
 };
 
